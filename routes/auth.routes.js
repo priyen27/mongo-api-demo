@@ -16,4 +16,10 @@ const controller = require("../controllers/auth.controller");
 
   router.post("/signin", controller.signin);
 
+  router.post("/send", controller.sendOtpToEmail);
+
+  router.post("/verify", controller.verifyOtp);
+
+  router.get("/me", controller.getMe);
+
 module.exports = router;
