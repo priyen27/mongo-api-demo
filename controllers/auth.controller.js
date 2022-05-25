@@ -3,6 +3,8 @@ const User = db.user;
 const Role = db.role;
 var jwt = require("jsonwebtoken");
 var bcrypt = require("bcryptjs");
+const Model = require('../models/data.model');
+const { sendEmail, sendOtp } = require("../services");
 
 // For new user registration
 exports.signup = (req, res) => {
@@ -32,7 +34,14 @@ exports.signup = (req, res) => {
               res.status(500).send({ message: err });
               return;
             }
-            res.send({ message: "User was registered successfully!" });
+            const html = `<h3 style="color: blue">Welcome to our team!</h3> </br></br><p>Hi ${req.body.username}</p></br></br></br><p>Thanks for taking the first step to making the world a better place.</p><br/><p>Best Wishes, <br/>Priyen's team</p> <br/><br/><img src="cid:image1" width="100" height="100" />`
+            const attachments = [{
+              filename: 'welcometoteam(1).jpg',
+              path: process.cwd() + "/images/welcometoteam(1).jpg",
+              cid: 'image1' //same cid value as in the html img src
+            }];
+            sendEmail.dispatchEmail(req.body.email, '', '', html, attachments)
+            res.status(200).send({ message: "User was registered successfully!" });
           });
         }
       );
@@ -95,3 +104,50 @@ exports.signin = (req, res) => {
       });
     });
 };
+
+
+// For sending otp 
+
+exports.sendOtpToEmail = (async (req, res) => {
+  try {
+      email = req.body.email;
+      const otp = sendOtp.generateOtp();
+      console.log(otp);
+      await User.updateOne({ email }, { otp });
+      const html = "<h3>OTP for account verification is </h3>" + "<h1 style='font-weight:bold;'>" + otp + "</h1>" //
+      sendEmail.dispatchEmail(req.body.email, '', '', html, [])
+      res.status(200).json({message: "Otp sent successfully"})
+    }
+    catch (error) {
+      res.status(400).json({message: error.message})
+    }
+})
+
+exports.verifyOtp = (async (req, res) => {
+  try {
+    email = req.body.email;
+    const currentUser = await User.findOne({ email }).exec();
+    console.log(currentUser);
+    if (req.body.otp === currentUser.otp) {
+      res.status(200).json({message: "Otp matched Successfully!"})
+    } else {
+      res.status(400).json({message: "Otp is incorrect!"})
+    }
+  } catch (error) {
+    res.status(400).json({message: error.message})
+  }
+})
+
+exports.getMe = (async (req, res) => {
+  try {
+    const authorization = req.headers.authorization;
+    const token = authorization.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWTKEY);
+    const _userId = decoded.id;
+    const currentUser = await User.findById(_userId).lean();
+    delete currentUser.password;
+    res.status(200).json(currentUser);
+  } catch (error) {
+    res.status(400).json({message: error.message})
+  }
+})

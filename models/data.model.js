@@ -8,7 +8,7 @@ const dataSchema = new mongoose.Schema({
     age: {
         required: true,
         type: Number
-    }
+    },
 });
 
 module.exports = mongoose.model('Data', dataSchema)
